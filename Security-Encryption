@@ -137,9 +137,7 @@ gcloud kms keys versions destroy 1 \
     --key=poc-key2
 
 
-
-
-
-# 3- customer supplied encryption key
+ 
+                                                                             # 3- customer supplied encryption key
 
 
