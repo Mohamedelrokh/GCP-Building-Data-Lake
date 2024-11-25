@@ -1,4 +1,5 @@
-**Pulic access feature **
+                               ** 1.   Pulic access feature **
+
 # Exploring the Public Access Options in Buckets
 
 # 1. Set Parameters
@@ -30,15 +31,3 @@ gsutil iam ch -d allUsers gs://$BUCKET/
 
 # 8. Remove the Bucket and Its Contents
 gsutil rm -r gs://$BUCKET/
-
-
-
-
-
-
-
-
-
-
-
-
