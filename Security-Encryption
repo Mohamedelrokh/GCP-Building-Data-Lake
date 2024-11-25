@@ -1,1 +1,26 @@
+#There are 3 types of encryption keys in GCP
+# 1- Google managed encryption key
+#it is the default key in GCP , It needs no configurations
+
+# we gonna explore it now
+# 1. Set Parameters
+REGION=us
+BUCKET=bucket-100-rokh
+
+# 2. Create the Bucket
+gsutil mb -l $REGION gs://$BUCKET/
+
+# 3. Check the encyption type
+# go to configursation tab and u will find google managed in encyption type 
+
+
+# 4. upload image to the bucket 
+curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
+the encryption for this image will be google managed as it inherits it for the parent bucket.
+
+
+
+# 2- customer managed encrytpion key
+# 3- customer supplied encryption key
+
 
