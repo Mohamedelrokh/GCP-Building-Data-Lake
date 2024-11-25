@@ -1,5 +1,8 @@
 #There are 3 types of encryption keys in GCP
-# 1- Google managed encryption key
+
+
+                                                               # A-  Google managed encryption key
+
 #it is the default key in GCP , It needs no configurations
 
 # we gonna explore it now
@@ -13,14 +16,73 @@ gsutil mb -l $REGION gs://$BUCKET/
 # 3. Check the encyption type
 # go to configursation tab and u will find google managed in encyption type 
 
-
 # 4. upload image to the bucket 
 curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
-the encryption for this image will be google managed as it inherits it for the parent bucket.
+#the encryption for this image will be google managed as it inherits it for the parent bucket.
+
+# 5. Remove the Bucket and Its Contents
+gsutil rm -r gs://$BUCKET/
 
 
 
-# 2- customer managed encrytpion key
+                                                               # B- customer managed encrytpion key
+
+# U can use KMS (Key Management Service) to rovide the encryption keys for buckets
+
+# 1. Enable the KMS api in yr project 
+gcloud services enable cloudkms.googleapis.com
+
+# 2. Creating Keyring
+#Keyring is used to group the keys (test keys , dev keys and so) 
+#Keyring is associated with certian project
+
+KEY_RING=my-key-ring
+LOCATION=us
+PROJECT_ID=$(gcloud config get-value project)
+
+gcloud kms keyrings create $KEY_RING \
+    --location $LOCATION \
+    --project $PROJECT_ID
+
+
+# 3 . Create Key in the keyring
+KEY_NAME=poc-key  
+gcloud kms keys create $KEY_NAME \
+    --keyring $KEY_RING \
+    --location $LOCATION \
+    --purpose encryption \
+    --project $PROJECT_ID
+
+# 4. create a bucket and specifiy the key for encryption
+BUCKET=my-encrypted-bucket-100
+gsutil mb -l $LOCATION \
+    -p $PROJECT_ID \
+    -k projects/$PROJECT_ID/locations/$LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME \
+    gs://$BUCKET/
+
+
+# 5. check the key for encryption for this bucket 
+gcloud storage buckets describe gs://$BUCKET --format="json"
+
+# the output for the encrytion part  "default_kms_key": "projects/project_name/locations/us/keyRings/my-key-ring/cryptoKeys/poc-key"
+
+#if u encounter any error regarding that  your Cloud Storage service account has no permission to use br Cloud KMS keys run the following command:
+gsutil kms authorize -p $PROJECT_ID -k \
+projects/$PROJECT_ID/locations/us/keyRings\
+/$KEY_RING/cryptoKeys/$KEY_NAME
+
+
+
+# 6. Upload an Image to the Bucket
+curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
+# the image will inherit the encryption key from its parent bucket 
+
+
+# 7. Remove the Bucket and Its Contents
+gsutil rm -r gs://$BUCKET
+
+
+
 # 3- customer supplied encryption key
 
 
