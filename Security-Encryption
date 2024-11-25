@@ -53,6 +53,9 @@ gcloud kms keys create $KEY_NAME \
     --purpose encryption \
     --project $PROJECT_ID
 
+
+
+
 # 4. create a bucket and specifiy the key for encryption
 BUCKET=my-encrypted-bucket-100
 gsutil mb -l $LOCATION \
@@ -75,11 +78,65 @@ projects/$PROJECT_ID/locations/us/keyRings\
 
 # 6. Upload an Image to the Bucket
 curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
-# the image will inherit the encryption key from its parent bucket 
+# the image will inherit the default encryption key set for its parent bucket 
+
+# 7. Encrypt individual objects with a different Cloud KMS key from the defulat key
+# if you want to use a different key from the default key set on the bucket, or if you don't have a default key set on the bucket. 
+#  . Create a second Key in the keyring
+KEY_NAME2=poc-key2
+gcloud kms keys create $KEY_NAME2 \
+    --keyring $KEY_RING \
+    --location $LOCATION \
+    --purpose encryption \
+    --project $PROJECT_ID
+
+# downloading the image
+curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png -o image.png 
+
+#uplaoding the image with providing the path to the second key (not the defualt one) 
+gcloud storage cp image.png gs://$BUCKET/image2.jpg     --encryption-key=projects/$PROJECT_ID/locatio
+ns/$LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME2
 
 
-# 7. Remove the Bucket and Its Contents
+
+8. Perform key rotation
+# key rotation is triggered by generating a new version of a key, and marking that version as the primary version. 
+# After rotating a key, its previous key versions (which no longer are primary) are neither disabled or destroyed, and remain available for decrypting data.
+# By providing a rotation schedule, Cloud KMS will automatically rotate your keys for you.
+
+# In the Cloud Console, go to Navigation menu > Security > Key Management and click on the KeyRing named my-key-ring
+# view your encryption keys named poc-key1 and poc-key2.
+# Click on the key named poc-key1 ,Currently you only have one version.
+# Click the EDIT ROTATION PERIOD button.
+# Set the rotation period dropdown to 30 days.
+
+
+
+# 9. Remove the Bucket and Its Contents
 gsutil rm -r gs://$BUCKET
+
+
+# 10. disable and destroy the two keys (each key has one version 1 which we gonna delete)
+gcloud kms keys versions disable 1 \
+    --keyring=my-key-ring \
+    --location=us \
+    --key=poc-key
+gcloud kms keys versions disable 1 \
+    --keyring=my-key-ring \
+    --location=us \
+    --key=poc-key2
+
+gcloud kms keys versions destroy 1 \
+    --keyring=my-key-ring \
+    --location=us \
+    --key=poc-key
+
+gcloud kms keys versions destroy 1 \
+    --keyring=my-key-ring \
+    --location=us \
+    --key=poc-key2
+
+
 
 
 
