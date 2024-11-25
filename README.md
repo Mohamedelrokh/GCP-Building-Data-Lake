@@ -1,3 +1,3 @@
-# gcp-CS-best practices in building data lake
+# GCP-Cloud storage-best practices in building data lake
 
 
