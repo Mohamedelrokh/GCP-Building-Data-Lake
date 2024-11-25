@@ -1,43 +1,28 @@
-#exploring the public access option in buckets
+# Exploring the Public Access Options in Buckets
 
-#setting paramaeters for the bucket and region to use 
+# 1. Set Parameters
 REGION=us
 BUCKET=bucket-100-rokh
 
-#Here is the command to create the bucket in the specified region
+# 2. Create the Bucket
 gsutil mb -l $REGION gs://$BUCKET/
-#make the bucket publicly accessed
+
+# 3. Make the Bucket Publicly Accessible
 gsutil iam ch allUsers:roles/storage.objectViewer gs://$BUCKET/
 
-
-#So objects we store in this bucket will be  Accessed from any google acc using the public link
-#Uploading an image to my bucket
+# 4. Upload an Image to the Bucket
 curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
 
+# 5. Test Public Access
+# You can access the uploaded image using the following public URL:
+echo "https://storage.googleapis.com/$BUCKET/image.jpg"
 
-#test the access to public by using the link for the image we upload 
-https://storage.googleapis.com/bucket-100-rokh/image.jpg 
-#as the bucket is accessed to public , u can download the image by using the url 
+# 6. Edit the Bucket to Remove Public Access
+gsutil iam ch -d allUsers gs://$BUCKET/
 
+# 7. Verify Access Change
+# After removing public access, the image will no longer be publicly accessible.
+# Use authenticated access methods to download the image if required.
 
-#edit the access, to make the bucket not public
-gsutil iam ch -d allUsers gs://public-access-bucket-1
-# the image no will be no public accesed 
-
-
-#u mey need to wait , then the image will be not public and there will not be public link
-# the authorized link can be used to download the image if u use the same google acc and it gives u error for otheer google accounts
-
-
-
-# removing the bucket and its contained objects
-gsutil rm -r gs://$BUCKET
-
-
-
-
-
-
-
-
-
+# 8. Remove the Bucket and Its Contents
+gsutil rm -r gs://$BUCKET/
