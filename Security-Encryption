@@ -6,22 +6,29 @@
 #it is the default key in GCP , It needs no configurations
 
 # we gonna explore it now
-# 1. Set Parameters
+
+1. Set Parameters
 REGION=us
 BUCKET=bucket-100-rokh
 
-# 2. Create the Bucket
+2. Create the Bucket
 gsutil mb -l $REGION gs://$BUCKET/
 
-# 3. Check the encyption type
+3. Check the encyption type
 # go to configursation tab and u will find google managed in encyption type 
 
-# 4. upload image to the bucket 
+4. upload image to the bucket 
 curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
 #the encryption for this image will be google managed as it inherits it for the parent bucket.
 
-# 5. Remove the Bucket and Its Contents
+5. Remove the Bucket and Its Contents
 gsutil rm -r gs://$BUCKET/
+
+
+
+
+
+
 
 
 
@@ -29,10 +36,10 @@ gsutil rm -r gs://$BUCKET/
 
 # U can use KMS (Key Management Service) to rovide the encryption keys for buckets
 
-# 1. Enable the KMS api in yr project 
+1. Enable the KMS api in yr project 
 gcloud services enable cloudkms.googleapis.com
 
-# 2. Creating Keyring
+2. Creating Keyring
 #Keyring is used to group the keys (test keys , dev keys and so) 
 #Keyring is associated with certian project
 
@@ -45,7 +52,7 @@ gcloud kms keyrings create $KEY_RING \
     --project $PROJECT_ID
 
 
-# 3 . Create Key in the keyring
+3 . Create Key in the keyring
 KEY_NAME=poc-key  
 gcloud kms keys create $KEY_NAME \
     --keyring $KEY_RING \
@@ -56,7 +63,7 @@ gcloud kms keys create $KEY_NAME \
 
 
 
-# 4. create a bucket and specifiy the key for encryption
+4. create a bucket and specifiy the key for encryption
 BUCKET=my-encrypted-bucket-100
 gsutil mb -l $LOCATION \
     -p $PROJECT_ID \
@@ -64,7 +71,7 @@ gsutil mb -l $LOCATION \
     gs://$BUCKET/
 
 
-# 5. check the key for encryption for this bucket 
+5. check the key for encryption for this bucket 
 gcloud storage buckets describe gs://$BUCKET --format="json"
 
 # the output for the encrytion part  "default_kms_key": "projects/project_name/locations/us/keyRings/my-key-ring/cryptoKeys/poc-key"
@@ -76,11 +83,11 @@ projects/$PROJECT_ID/locations/us/keyRings\
 
 
 
-# 6. Upload an Image to the Bucket
+6. Upload an Image to the Bucket
 curl https://abs.twimg.com/icons/apple-touch-icon-192x192.png | gsutil cp - gs://$BUCKET/image.jpg
 # the image will inherit the default encryption key set for its parent bucket 
 
-# 7. Encrypt individual objects with a different Cloud KMS key from the defulat key
+7. Encrypt individual objects with a different Cloud KMS key from the defulat key
 # if you want to use a different key from the default key set on the bucket, or if you don't have a default key set on the bucket. 
 #  . Create a second Key in the keyring
 KEY_NAME2=poc-key2
@@ -112,11 +119,11 @@ ns/$LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME2
 
 
 
-# 9. Remove the Bucket and Its Contents
+9. Remove the Bucket and Its Contents
 gsutil rm -r gs://$BUCKET
 
 
-# 10. disable and destroy the two keys (each key has one version 1 which we gonna delete)
+10. disable and destroy the two keys (each key has one version 1 which we gonna delete)
 gcloud kms keys versions disable 1 \
     --keyring=my-key-ring \
     --location=us \
@@ -139,5 +146,125 @@ gcloud kms keys versions destroy 1 \
 
  
                                                                              # 3- customer supplied encryption key
+
+# As an alternative to a Google-managed server-side encryption key,
+# you can choose to provide your own AES-256 key, encoded in standard Base64. 
+
+# Cloud Storage does not permanently store your key on Google's servers or otherwise manage your key.
+# Instead, you provide your key for each Cloud Storage operation, 
+# and your key is purged from Google's servers after the operation is complete.
+# Cloud Storage stores only a cryptographic hash of the key so that future requests can be validated against the hash.
+
+
+
+1. create a bucket 
+BUCKET=my-encrypted-bucket-100
+gsutil mb -l us gs://$BUCKET
+
+
+2. download a sample file 
+curl \
+https://hadoop.apache.org/docs/current/\
+hadoop-project-dist/hadoop-common/\
+ClusterSetup.html > setup.html
+
+# make two copies of the file
+cp setup.html setup2.html
+cp setup.html setup3.html
+
+
+3.  Generate a CSEK key 
+# You must provide Cloud Storage a key that is a 256-bit string encoded in RFC 4648 standard base64.
+openssl rand 32 > mykey.txt
+openssl base64 -in mykey.txt
+
+# Copy the value of the generated key
+
+
+4. Modify the .boto file
+# The encryption controls are contained in a gsutil configuration file named .boto.
+gsutil config -n
+ls -al
+
+# To edit the .boto file
+nano .boto
+
+# Within the .boto file, locate the line with "#encryption_key=". 
+To search in Nano, click the keyboard located in the top right of the SSH window, 
+select Ctrl+W and type #encrypt
+
+# Uncomment the encryption_key line by removing the # character,
+# and paste the key you generated earlier.
+
+Press Ctrl+X to Exit, Y to save the file, then Enter to confirm the filename.
+
+
+5. Upload files (encrypted) and verify in the Cloud Console
+gsutil cp setup.html gs://$BUCKET
+gsutil cp setup2.html gs://$BUCKET
+
+6.  view the storage bucket contents 
+# select Navigation menu > Cloud Storage, then click on the bucket.
+# Both the setup.html and setup2.html files show that they are customer-encrypted.
+
+
+7. verify the encryption 
+Delete a local file, copy from Cloud Storage, and verify encryption
+rm setup.html
+
+#To copy the file back from the bucket, run the following command:
+gsutil cp gs://$BUCKET/setup.html ./
+
+# edit the .boto file again and comment the encryption key line 
+rm setup2.html
+gsutil cp gs://$BUCKET/setup2.html ./
+
+# it will raise an error now  
+# Missing decryption key with SHA256 has
+
+
+8.  Rotate CSEK keys
+# To rotate CSEKs, you change your encryption_key configuration value to a decryption_key configuration value
+# and then use a new value for the encryption_key.
+# Then you can use the rewrite command so the old files will be now encrypted with the new key with keeping the decryption key as the old key
+# so we can  rotate keys in the cloud without downloading and re-uploading the data.
+
+# generate a new key:
+openssl rand 32 > mykey.txt
+openssl base64 -in mykey.txt
+
+# Copy the value of the generated key
+
+nano .boto
+# Locate the current encryption_key line and comment it out by adding the # character 
+# Add a new line with encryption_key= and paste the new key value.
+# Copy the value of the original encryption_key and paste it for the value of the decryption_key1 line.
+
+#Upload a new file to the bucket. This file will be encrypted with the new key:
+gsutil cp setup3.html gs://$BUCKET
+
+# Note: At this point, setup.html and setup2.html are encrypted with the original key and
+# setup3.html is encrypted with the new key.
+
+9. Rewrite the key for file 1 
+# Rewriting an encrypted file causes the file to be decrypted it using the decryption_key1 that you previously set, and encrypts the file with the new encryption_key.
+# u must provide the decryption key to be the old encryption keys that used for encry[ting the file first.
+
+gsutil rewrite -k gs://$BUCKET/setup.html
+
+At this point, setup.html has been rewritten with the new encryption key
+# Setup2.html was not rewritten with the new key, so it can no longer be decrypted, and the copy failed.
+
+
+
+9. Remove the Bucket and Its Contents
+gsutil rm -r gs://$BUCKET
+
+10 . comment the encryption_key and decryption_key line in .boto file
+nano .boto 
+# comment the two line  , save , exit
+
+11. next step , how can we automate loading many files in the bucket with CSEK from service account 
+    replacing the gsutil method 
 
 
