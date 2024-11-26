@@ -1,4 +1,4 @@
-# GCP Cloud Storage - Best Practices in Building a Data Lake
+# GCP Cloud Storage - Best Practices in Building a Data Lake on GCP
 
 ## Data Security
 - Disable **public access** only when necessary to make data available publicly, Enable it when u want to make avaialale for anyone to use
